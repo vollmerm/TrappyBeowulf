@@ -1,0 +1,201 @@
+Trappy Beowulf
+==============
+
+This project is an attempt to modify Beowulf to use [Trappy Minimax](http://ieeexplore.ieee.org/xpl/articleDetails.jsp?reload=true&arnumber=4100129). I started this as a class project for CSc 215 at California State University, Sacramento.
+
+The original readme for Beowulf is included below.
+
+The Beowulf Project
+===================
+
+README for Version 2.x.y
+------------------------
+
+
+
+Contents;
+---------
+
+(1) About the Beowulf Project
+(2) Getting Started
+(3) User submissions
+(4) Acknowledgements
+
+
+(1) - About the Beowulf Project
+-------------------------------
+
+Beowulf is a strong computer chess engine developed primarily by Colin Frayn
+(University of Birmingham, UK) and Dann Corbit (USA).  It is a very carefully
+designed project with many powerful algorithms designed to be readable and
+easily understood even by beginners to the subject.
+
+Beowulf was coded primarily over a two week period in March, 2001.  It was
+further honed and improved over the following two months, and released on
+May 31st, 2001.  Beowulf is an open source project, the code to which is
+freely available to the entire chess programming community provided an
+acknowledgement is made either to me, or to the project as a whole.
+
+Beowulf is under continuous development, mainly by Colin Frayn.  Its
+strength is difficult to estimate, but recent estimates of version 2.0
+have placed it around 2270 ELO (International Master Standard) on a
+reasonably fast computer. v2.1 has been running on ICC and achieved a
+maximum ELO of over 2500, though this is slightly uncertain and is likely
+to be a fairly large overestimate.
+
+The idea behind Beowulf was simple - to produce and distribute a new chess
+engine to the entire community which was not only (a) strong, but (b) easy
+to understand.  Currently many engines exist in the former category, and
+very few in the second.  In my opinion, there are none whatsoever that
+fulfil both criteria.  Beowulf hopefully fills that particular gap.
+
+In addition to the source code, my intent was to provide a fully documented
+theory page.  There is currently a version up and running at the following
+address;
+
+http://www.chessbrain.net/beowulf/theory.html
+
+Please let me know if I've missed anything off or anything is
+incorrect/unclear. Also let me have any extra submissions that you have
+written yourself (although I retain the right to alter or refuse them if I
+think they don't fit in too well with the rest of the site or they're
+covering points that I have already explained etc....).
+
+The Beowulf home page is here;
+
+http://www.chessbrain.net/beowulf/
+
+This page includes several bits of information about the project, including 
+acknowledgements, match and test suite results and a complete version history.
+
+(2) - Getting Started
+---------------------
+
+Beowulf should be rather simple and straightforward to install on any
+platform.  The code is almost entirely ANSI compliant, with one or two
+exceptions.  There is very little file handling, and at the moment, only a
+very small number of complicated features.  Beowulf runs in text mode, and
+is also fully compatible with Xboard/Winboard graphical interfaces.
+
+In order to install, the source must be compiled.  If you don't know
+how to compile and edit code then you probably shouldn't be playing around
+with the source code ;)  Executables can be obtained from Dann Corbit's FTP
+site;
+
+ftp://cap.connx.com/
+
+and also from the Beowulf home page (see above).
+
+Included in the Beowulf package you should find the entire source code,
+including the Nalimov tablebase access code.  You should also find a
+small opening book.  I do not provide a Makefile as I have found that the
+most efficient compile option is simply to compile the source include file
+chess.c on its own with full optimisations.  i.e. for systems using GCC
+as their primary compiler, type;
+
+gcc -O3 chess.c -o beowulf -lm
+
+Beowulf reads an opening book format similar to that of ColChess but
+slightly more concise.  A larger book is available on the homepage (see
+above for the address).  For those of you who wish to create your own books,
+there are a few basic features included in Beowulf to allow this, given a
+source PGN file.  Several of these can be found on the web with Grandmaster
+standard games.
+
+Beowulf can also read a personality file, similar to the file default.per
+provided.  It chooses sensible defaults, so you can remove this file totally
+if you are not bothered about this feature.  If you want only to change a
+few parameters then you only need to list the ones you want to change (the
+others will be set to default values).  Do not change the format of the
+lines, just the number at the beginning of each line.  These parameters are
+clipped if ridiculously large or small values are chosen.  The order of the
+entries is not important.
+
+Beowulf can also read Nalimov EGTB files.  These should be either placed in
+a subdirectory called 'TB', or in the directory pointed to by any of the
+following methods;
+(a) Environment variable EGTBPATH
+(b) Entry in the config file
+(c) Command line parameter TBLOC="c:\path"
+
+The configuration file (beowulf.cfg) should be left in the install directory.
+Whenever Beowulf is run from that directory, the configuration file is read
+in order to overwrite the default options in the source.  Environment variables
+can also be read in to overwrite these configuration file settings.  The only
+three supported at the moment are TBPATH, PERSONALITYFILE and BOOKFILE, which
+are the directory in which the table bases are stored, and the locations of
+your chosen personality file and opening book file respectively.
+
+Finally, a set of command line options can also be issued.  These override
+all other settings, and are useful for setting the hash table size for use
+in test games.  For a list, try running Beowulf with the command line option
+'--help'.  The list is reproduced here for your benefit;
+
+?, help            - Print this file
+hash<num>          - Set the hash table size (2^n kb)
+tbloc=<directory>  - Set the tablebase location
+book=<filename>    - Set the opening book
+person=<filename>  - Set the personality file
+wskill<num>        - Set the skill level for white (1 to 10)
+bskill<num>        - Set the skill level for black (1 to 10)
+epdtest=<file>     - Run an EPD test and quit immediately
+st<num>            - Set the time per move for an EPD test (default 5s)
+
+Any further questions, feel free to email me at beowulf@chessbrain.net.
+
+(3) - User Submissions
+----------------------
+
+If you wish to submit bugfixes or changes to Beowulf, then I'd appreciate if
+you could email them to me at the usual address, beowulf@chessbrain.net.  In
+particular, I'd prefer it if you could email the entire file(s) that you
+have changed together with a clear list of the changes made.  Please email
+the files as plain text attachments as this is the easiest for me to read.
+
+I welcome any user submissions from competent, experienced programmers.
+Beowulf is an ever changing project, and I'd love it if people write their
+own functionality into the code.  You will receive a well-earned
+acknowledgement both here in this README file, and on the official web page.
+If you fix bugs then you will be even more popular.
+
+If you wish to submit a bug report (with no code changes) then please do so
+to the same address, with a list of the problems encountered, the platform
+on which you were running the code, the compiler used, and the attempts that
+you made to fix the problem (especially any that worked).
+
+Many thanks in advance for your help!
+
+
+(4) - Acknowledgements
+----------------------
+
+I acknowledge the invaluable work of the following people in the Beowulf
+project, in no particular order except the first two;
+
+Dann Corbit - Dedicated many many hours work to testing and gave me much invaluable advice.
+Ron Murawski - Countless useful comments, mainly on the evaluation code, and a number of substantial rewrites of other sections of the code.
+Bob Hyatt - The source code to his strong program Crafty was an invaluable resource when I was in the preliminary stages of coding.
+Ernst Heinz - His page on bitboard programming helped me to understand the concept.
+Eugene Nalimov - For his incomprehensible, but yet vital endgame tablebase code
+Andrew Kadatch - For the compression code which works with the EGTBs
+Jim Monaghan - For a great many comments on Beowulf matches, and many tips on improving the engine's strategic play.
+Tim Foden - Helped with one or two compatability problems and testing.
+Gian-Carlo Pascutto - For many useful comments and suggestions on the code, especially the move ordering.
+Remi Coulom - Many useful suggestions and tweaks to the code, especially concerning the hashtable.
+Makoto Matsumoto, Takuji Nishhimura and Shawn Cokus - For the random number generation code used in some earlier versions.
+Oliver Brausch - For the Bioskey() function, taken from his engine Olithink, with permission.
+Jason Carley - For running Beowulf on ICC under the handle 'jc-comp'.
+Carlos Justiniano - For his interest in Beowulf through the ChessBrain project.
+
+
+Enjoy Beowulf!
+
+
+
+Cheers,
+Colin Frayn
+
+Birmingham, UK
+28th January 2004
+
+Email: beowulf@chessbrain.net
