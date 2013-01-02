@@ -632,7 +632,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
 
     /* Get the highest scoring move from those left on the list.  Put it at the top. */
-    if (ply > 1)
+    if (ply != 1)
       SortFrom(Full,Moveno,NMoves);
     
     m = Full[Moveno].move;
@@ -826,7 +826,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       best = score;
       bestmove = m;
        /* Have we improved alpha? (i.e. this an interesting move) */
-      if (best>talpha) {
+      if (ply > 1 && best>talpha) {
 	      IncreaseCounts(Full[Moveno],ply,score,B->side);
 	       /* Fail-high cutoff.  This means that this move is so good that it will
 	        * never be played as our opponent will never allow it (he/she has better
@@ -917,16 +917,14 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   if (ply == 1 && GlobalDepth > 3) {
     for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
       m = Full[Moveno].move;
-      if (!inchk && InCheck(B,Opponent(B->side))) {
-        UndoMove(B,m,U);
-        continue;
-      }
+      
       TrapNode = TRUE;
       for (dI = 0; TrapNode && dI < GlobalDepth - 1; dI++) {
         if (TrapVectorRecorded[MFrom(m)][MTo(m)][dI+2]) {
           TScores[dI] = TrapVectorScore[MFrom(m)][MTo(m)][dI+2];
         } else {
           TrapNode = FALSE;
+					printf("Skip\n");
           break;
         }
       }
@@ -951,7 +949,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       //}
  
 
-      if (Tfactor != 0 && adjEval >= best) {
+      if (Tfactor > 0 && adjEval >= best) {
         printf("\n*** YOU'VE ACTIVATED MY TRAP CARD!\n");
         printf("Setting trap: Best = %d, score = %d, Tfactor = %f\n",
             best,TScores[GlobalDepth-2], Tfactor);
@@ -963,7 +961,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
         bestmove = m;
       }
 #if TRAPPY_DEBUG == 1
-      else if (Tfactor > 0.2){
+      else if (Tfactor > 0){
         printf("Skipping potential trap. Best = %d, score = %d, Tfactor = %f\n",
             best,TScores[GlobalDepth-2], Tfactor);
         printf("profit = %d scale = %f trapQuality %f adjEval = %d\n", profit, scale(trapQuality, best), trapQuality, adjEval);
