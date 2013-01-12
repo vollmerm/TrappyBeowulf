@@ -632,7 +632,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
 
     /* Get the highest scoring move from those left on the list.  Put it at the top. */
-    if (ply != 1)
+    //if (ply != 1)
       SortFrom(Full,Moveno,NMoves);
     
     m = Full[Moveno].move;
@@ -924,7 +924,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
           TScores[dI] = TrapVectorScore[MFrom(m)][MTo(m)][dI+2];
         } else {
           TrapNode = FALSE;
-					printf("Skip\n");
+	  printf("Skip\n");
           break;
         }
       }
@@ -936,7 +936,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       Tfactor = trappiness(TScores[GlobalDepth-2], TScores, GlobalDepth - 2, ply);
       
       profit = best - TScores[GlobalDepth-2];
-			if (profit <= 0) continue;
+      if (profit <= 0) continue;
       trapQuality = profit * Tfactor;
       //if (CurrentMove[Moveno] > best) 
       //  continue;
@@ -944,7 +944,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       //  trapQuality = 1;
       //  adjEval = CurrentMove[Moveno] + 1;
       //} else {
-        adjEval = TScores[GlobalDepth-2] + ceil(scale(trapQuality, best));
+      adjEval = TScores[GlobalDepth-2] + ceil(scale(trapQuality, best));
         //adjEval = ceil(CurrentMove[Moveno] + trapQuality);
       //}
  
