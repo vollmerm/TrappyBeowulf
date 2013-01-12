@@ -442,7 +442,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   int EntryType, EntryScore, SEEScore;
   int adjEval, dI, TScores[MAX_MOVES], profit;
   float Tfactor, trapQuality;
-  int CurrentMove[MAX_MOVES];
+  //int CurrentMove[MAX_MOVES];
   BOOL TrapNode = (ply == 1);
   BOOL DoNull = TRUE, IsCapTopMove = FALSE;
   FullMove Full[100];
@@ -816,7 +816,9 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
     if (ply == 1) {
       TrapVectorScore[MFrom(m)][MTo(m)][GlobalDepth] = score;
       TrapVectorRecorded[MFrom(m)][MTo(m)][GlobalDepth] = TRUE;
-      CurrentMove[Moveno] = score;
+      //CurrentMove[Moveno] = score;
+      printf("%d\n", GlobalDepth);
+      printf("%d %d %d\n", MFrom(m), MTo(m), GlobalDepth);
     }
 
      /*  ---------------====     HAVE WE IMPROVED OUR BEST SCORE?     ====------------- */
@@ -923,9 +925,13 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
         if (TrapVectorRecorded[MFrom(m)][MTo(m)][dI+2]) {
           TScores[dI] = TrapVectorScore[MFrom(m)][MTo(m)][dI+2];
         } else {
-          TrapNode = FALSE;
-	  printf("Skip\n");
-          break;
+          if (dI > 0) {
+            TScores[dI] = TScores[dI-1];
+          } else {
+            TrapNode = FALSE;
+  	    //printf("Skip\n");
+            break;
+          }
         }
       }
 
