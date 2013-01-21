@@ -817,8 +817,8 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       TrapVectorScore[MFrom(m)][MTo(m)][GlobalDepth] = score;
       TrapVectorRecorded[MFrom(m)][MTo(m)][GlobalDepth] = TRUE;
       //CurrentMove[Moveno] = score;
-      printf("%d\n", GlobalDepth);
-      printf("%d %d %d\n", MFrom(m), MTo(m), GlobalDepth);
+      //printf("%d\n", GlobalDepth);
+      //printf("%d %d %d\n", MFrom(m), MTo(m), GlobalDepth);
     }
 
      /*  ---------------====     HAVE WE IMPROVED OUR BEST SCORE?     ====------------- */
@@ -913,10 +913,11 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   if (AbortFlag && ply==0 && depth == (GlobalDepth*ONEPLY) && best>-INFINITY && InputFlag != INPUT_RESIGN)
     PrintThinking(best,B);
   
-#ifdef TRAPPY
-
+#ifdef MAX_DEPTH
+#if TRAPPY == 1
+  //printf(" TRAPPY? %d\n", GlobalDepth);
   /* Calculate trappiness */
-  if (ply == 1 && GlobalDepth > 3) {
+  if (ply == 1 && GlobalDepth == MAX_DEPTH) {
     for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
       m = Full[Moveno].move;
       
@@ -929,7 +930,9 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
             TScores[dI] = TScores[dI-1];
           } else {
             TrapNode = FALSE;
-  	    //printf("Skip\n");
+#if TRAPPY_DEBUG == 1             
+  	    printf("Skip\n");
+#endif
             break;
           }
         }
@@ -980,7 +983,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   }
 
 #endif
-
+#endif
    /* Return the best value found */
   BestMoveRet = bestmove;
   return best;
