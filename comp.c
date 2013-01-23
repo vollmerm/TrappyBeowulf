@@ -632,7 +632,9 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
 
     /* Get the highest scoring move from those left on the list.  Put it at the top. */
-    //if (ply != 1)
+#ifndef NO_ORDER
+    if (ply > 1)
+#endif
       SortFrom(Full,Moveno,NMoves);
     
     m = Full[Moveno].move;
@@ -828,7 +830,11 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       best = score;
       bestmove = m;
        /* Have we improved alpha? (i.e. this an interesting move) */
+#ifdef NO_AB
       if (ply > 1 && best>talpha) {
+#else
+      if (best>talpha) {
+#endif
 	      IncreaseCounts(Full[Moveno],ply,score,B->side);
 	       /* Fail-high cutoff.  This means that this move is so good that it will
 	        * never be played as our opponent will never allow it (he/she has better
@@ -917,7 +923,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
 #if TRAPPY == 1
   //printf(" TRAPPY? %d\n", GlobalDepth);
   /* Calculate trappiness */
-  if (ply == 1 && GlobalDepth == MAX_DEPTH) {
+  if (ply == 1 && GlobalDepth >= MAX_DEPTH) {
     for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
       m = Full[Moveno].move;
       
@@ -931,7 +937,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
           } else {
             TrapNode = FALSE;
 #if TRAPPY_DEBUG == 1             
-  	    printf("Skip\n");
+  	    //printf("Skip\n");
 #endif
             break;
           }
