@@ -632,7 +632,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
 
     /* Get the highest scoring move from those left on the list.  Put it at the top. */
-#ifndef NO_ORDER
+#ifdef NO_ORDER
     if (ply > 1)
 #endif
       SortFrom(Full,Moveno,NMoves);
