@@ -821,7 +821,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       //CurrentMove[Moveno] = score;
       //printf("%d\n", GlobalDepth);
       //printf("%d %d %d\n", MFrom(m), MTo(m), GlobalDepth);
- /  }
+   }
 
      /*  ---------------====     HAVE WE IMPROVED OUR BEST SCORE?     ====------------- */
 
