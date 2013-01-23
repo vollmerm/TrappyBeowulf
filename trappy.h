@@ -4,7 +4,7 @@
 /* Enable Trappy Minimax */
 #define TRAPPY_DEBUG    1       // show weird debug stuff
 #define TRAPPY          1       // enable trappy minimax
-#define MAX_DEPTH       9
+#define MAX_DEPTH       8
 #define TRAP_METHOD     3       // Methods: 1. median, 2. best value, 3. last value
 #define TRAP_SCALE 	1
 //#define NO_AB

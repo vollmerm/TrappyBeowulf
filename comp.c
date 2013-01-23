@@ -821,7 +821,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       //CurrentMove[Moveno] = score;
       //printf("%d\n", GlobalDepth);
       //printf("%d %d %d\n", MFrom(m), MTo(m), GlobalDepth);
-    }
+ /  }
 
      /*  ---------------====     HAVE WE IMPROVED OUR BEST SCORE?     ====------------- */
 
@@ -923,21 +923,21 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
 #if TRAPPY == 1
   //printf(" TRAPPY? %d\n", GlobalDepth);
   /* Calculate trappiness */
-  if (ply == 1 && GlobalDepth >= MAX_DEPTH) {
+  if (ply == 4 && GlobalDepth == MAX_DEPTH) {
     for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
       m = Full[Moveno].move;
       
       TrapNode = TRUE;
-      for (dI = 0; TrapNode && dI < GlobalDepth - 1; dI++) {
+      for (dI = GlobalDepth - 2; TrapNode && dI >= 0; dI--) {
         if (TrapVectorRecorded[MFrom(m)][MTo(m)][dI+2]) {
           TScores[dI] = TrapVectorScore[MFrom(m)][MTo(m)][dI+2];
         } else {
-          if (dI > 0) {
-            TScores[dI] = TScores[dI-1];
+          if (dI < GlobalDepth - 2) {
+            TScores[dI] = TScores[dI+1];
           } else {
             TrapNode = FALSE;
 #if TRAPPY_DEBUG == 1             
-  	    //printf("Skip\n");
+  	    		printf("Skip\n");
 #endif
             break;
           }
@@ -965,6 +965,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
  
 
       if (Tfactor > 0 && adjEval >= best) {
+				PrintMove(m, TRUE, stdout);
         printf("\n*** YOU'VE ACTIVATED MY TRAP CARD!\n");
         printf("Setting trap: Best = %d, score = %d, Tfactor = %f\n",
             best,TScores[GlobalDepth-2], Tfactor);
@@ -977,6 +978,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       }
 #if TRAPPY_DEBUG == 1
       else if (Tfactor > 0){
+				PrintMove(m, TRUE, stdout);
         printf("Skipping potential trap. Best = %d, score = %d, Tfactor = %f\n",
             best,TScores[GlobalDepth-2], Tfactor);
         printf("profit = %d scale = %f trapQuality %f adjEval = %d\n", profit, scale(trapQuality, best), trapQuality, adjEval);

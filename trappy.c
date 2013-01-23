@@ -52,7 +52,7 @@ float trappiness(int last, const int * Scores, int scoreCount, int ply) {
     inner = *(Scores + scoreCount-1);
   //printf("Trappiness inner %d last %d\n",inner,last);
   int absLast = abs(last);
-  if (absLast == 0) { absLast = 1; }
+  //if (absLast == 0) { absLast = 1; }
   if (ply % 2 == 1) {
     if (inner <= last) 
       return 0;
@@ -77,10 +77,10 @@ float trappiness(int last, const int * Scores, int scoreCount, int ply) {
 float scale(float T, int best) {
 #if TRAP_SCALE == 1
   int M = abs(best);
-  float min = 0, max = M, a = 0, b = M*TRAP_CEILING;
+  float min = 0, max = M*2, a = 0, b = M*TRAP_CEILING;
   if (best <= 1) return T;
   if (T < a) return 0;
-  if (T > M) return M*TRAP_CEILING;
+  if (T > M*2) return M*TRAP_CEILING;
   //if (T > M)
   return ((b-a)*(T-min))/(max-min);
 #else
