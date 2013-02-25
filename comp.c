@@ -918,26 +918,50 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
     * opponent has just resigned. */
   if (AbortFlag && ply==0 && depth == (GlobalDepth*ONEPLY) && best>-INFINITY && InputFlag != INPUT_RESIGN)
     PrintThinking(best,B);
-  
+
+
+
+	/******************************************************************************************** 
+	 * TRAPPY MINIMAX CODE
+	 * BEWARE: HERE BE DRAGONS
+	 *
+	 * This code is a mess. I apologize. I edit and re-edit it all the time
+	 * and commit randomly. It's in no state to be read by anyone,
+	 * probably even me. 
+	 ********************************************************************************************/
+
+
+
 #ifdef MAX_DEPTH
 #if TRAPPY == 1
   //printf(" TRAPPY? %d\n", GlobalDepth);
   /* Calculate trappiness */
-  if (ply == 4 && GlobalDepth == MAX_DEPTH) {
+  if (GlobalDepth == MAX_DEPTH && ply < GlobalDepth && ply % 2 == 1) {
+		/* I'm still not clear on why the minimax paper had code for
+		 * calculating the trappiness of even ply nodes, so I skip
+		 * them.
+		 */
     for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
       m = Full[Moveno].move;
       
-      TrapNode = TRUE;
+      TrapNode = TRUE; // I declared this for some other use
+                       // then didn't use it, so I re-purposed it
+											 // during a random debugging session...
+											 // If I weren't so lazy I'd make a better
+											 // variable name.
       for (dI = GlobalDepth - 2; TrapNode && dI >= 0; dI--) {
         if (TrapVectorRecorded[MFrom(m)][MTo(m)][dI+2]) {
           TScores[dI] = TrapVectorScore[MFrom(m)][MTo(m)][dI+2];
         } else {
+					// I have not convinced myself that this actually works:
+					// try to "fill in" holes in the TScores array by borrowing
+					// the next-higher value.
           if (dI < GlobalDepth - 2) {
             TScores[dI] = TScores[dI+1];
           } else {
             TrapNode = FALSE;
 #if TRAPPY_DEBUG == 1             
-  	    		printf("Skip\n");
+  	    		//printf("Skip\n");
 #endif
             break;
           }
@@ -950,18 +974,12 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       }
       Tfactor = trappiness(TScores[GlobalDepth-2], TScores, GlobalDepth - 2, ply);
       
+			// This doesn't match the pseudo-code from the minimax paper, but that's because
+			// as far as I can tell the pseudocode was wrong. 
       profit = best - TScores[GlobalDepth-2];
       if (profit <= 0) continue;
       trapQuality = profit * Tfactor;
-      //if (CurrentMove[Moveno] > best) 
-      //  continue;
-      //if (profit == 0 && Tfactor > 0) {
-      //  trapQuality = 1;
-      //  adjEval = CurrentMove[Moveno] + 1;
-      //} else {
       adjEval = TScores[GlobalDepth-2] + ceil(scale(trapQuality, best));
-        //adjEval = ceil(CurrentMove[Moveno] + trapQuality);
-      //}
  
 
       if (Tfactor > 0 && adjEval >= best) {

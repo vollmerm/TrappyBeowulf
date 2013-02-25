@@ -1,0 +1,6 @@
+trappy8 normal8: 1-2-7
+trappy8 normal7: 9-0-1
+
+-- odd ply traps only --
+trappy8 normal7: 28-2-0
+normal8 normal7: 21-1-8
