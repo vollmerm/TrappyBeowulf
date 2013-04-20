@@ -80,6 +80,7 @@ MOVE BestMoveRet;
 int TrapVectorScore[64][64][50] = {0};
 int TrapVectorRecorded[64][64][50] = {0};
 BOOL ENABLETRAP;
+BOOL TrapSet;
 
 #ifdef BEOSERVER
 extern int BenchmarkSpeed;
@@ -217,11 +218,16 @@ MOVE Comp(void) {
   /* Set up the minimum parallel depth to 'not defined' */
   SeqDepth= -1;
 #endif // BEOSERVER
+
+
+
+
    /* clear trap vectors */
 
   memset(TrapVectorScore, 0, sizeof(TrapVectorScore));
   memset(TrapVectorRecorded, 0, sizeof(TrapVectorRecorded));
-
+  
+  TrapSet = FALSE; // initially no trap has been set
 
 
 
@@ -235,6 +241,8 @@ MOVE Comp(void) {
     GlobalDepth = depth;
 
     ENABLETRAP = TRUE;
+
+    
      
      /*   --==   Do Search Recursion Here   ==--   */
 
@@ -295,17 +303,17 @@ MOVE Comp(void) {
         else if (!AbortFlag && IsCM(score) && Post) PrintThinking(score,B);
       }
       else if (!AbortFlag) PrintedPV = FALSE;
-	  
-	  // Is this an easy node? (i.e. a simple recapture move that must be played)
+          
+          // Is this an easy node? (i.e. a simple recapture move that must be played)
       if (TopOrderScore > NextBestOrderScore + EASY_MOVE_MARGIN && BestMoveRet != NO_MOVE && TopOrderScore == SEE(B,MFrom(BestMoveRet),MTo(BestMoveRet),IsPromote(BestMoveRet)) * 100) {
-		  bEasyMove = TRUE;
-	  }
-	  else bEasyMove = FALSE;
+                  bEasyMove = TRUE;
+          }
+          else bEasyMove = FALSE;
     }
-	
-	  /* --==  Search Finished ==--  */
-	
-	  /* Probe the hashtable for the suggested best move */
+        
+          /* --==  Search Finished ==--  */
+        
+          /* Probe the hashtable for the suggested best move */
     Entry = HashProbe(B);
     if (Entry) {
       BestMove = Entry->move;
@@ -424,6 +432,11 @@ MOVE Comp(void) {
   free(NodeTable);
 #endif // BEOSERVER
 
+  // print out a trap if we set one
+  if (TrapSet) {
+    printf("Trap was set, and a non-ideal move is being chosen.\n");
+  }
+
    /* Return the best move that we found */
   return Previous;
 }
@@ -434,7 +447,7 @@ MOVE Comp(void) {
  * can then do a more accurate search with better defined bounds.  See Prof. Alexander
  * Reinefeld's www page for a paper detailing the algorithm. */
 int Search(Board *B,const int alpha, const int beta, int depth, int ply,
-		const int inchk, int fifty, int NullDepth, MOVE LastMove) {
+                const int inchk, int fifty, int NullDepth, MOVE LastMove) {
   MOVE movelist[MAX_MOVES],m,*lastmove,hashmove=NO_MOVE,bestmove=NO_MOVE;
   int score = -INFINITY, best = -INFINITY, evalscore=0;
   int NMoves,Moveno,newfifty=fifty+1,ep_carry,p,pto,LegalMoves=0,gchk;
@@ -442,9 +455,10 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   int EntryType, EntryScore, SEEScore;
   int adjEval, dI, TScores[MAX_MOVES], profit;
   float Tfactor, trapQuality;
-  //int CurrentMove[MAX_MOVES];
   BOOL TrapNode = (ply == 1);
+  BOOL AbortTrap;
   BOOL DoNull = TRUE, IsCapTopMove = FALSE;
+  BOOL LocalTrapSet = FALSE;
   FullMove Full[100];
   Undo U;
   BOOL threat=FALSE,Futile=FALSE,IsPV=FALSE,ReduceExtensions=FALSE;
@@ -510,13 +524,13 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
          /* This was an upper bound, but still isn't greater than alpha, so return a fail-low */
         case (HASH_UPPER) : if (EntryScore <= talpha) return EntryScore;
          /* This was an upper bound, but was greater than alpha, so adjust beta if necessary */
-	                           if (EntryScore < tbeta)   tbeta = EntryScore; break;
+                                   if (EntryScore < tbeta)   tbeta = EntryScore; break;
          /* This was a lower bound, but was still greater than beta, so return a fail-high */
         case (HASH_LOWER) : if (EntryScore >= tbeta)  return EntryScore;
          /* This was a lower bound, but was not greater than beta, so adjust alpha if necessary */
-	                           if (EntryScore > talpha)  talpha = EntryScore; break;
+                                   if (EntryScore > talpha)  talpha = EntryScore; break;
          /* Check to see if we should avoid null moves */
-	      case (HASH_NULL)  : DoNull=FALSE; break;
+              case (HASH_NULL)  : DoNull=FALSE; break;
       }
     }
   }
@@ -630,6 +644,8 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   /*     -----------====     CYCLE THROUGH MOVES - INNER LOOP     ====---------- */
 
   for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
+
+    TrapSet = FALSE; // set global trapset to false, then see if recursive calls change it
 
     /* Get the highest scoring move from those left on the list.  Put it at the top. */
 #ifdef NO_ORDER
@@ -772,7 +788,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       }
     }
     
-	  /* -----------------====     RECURSE TO THE NEXT PLY     ====---------------- */
+          /* -----------------====     RECURSE TO THE NEXT PLY     ====---------------- */
      
      /* If at bottom depth then return quiescence score.  Basically, we find a quiet
       * position before we accept the static evaluation.   This avoids the so-called
@@ -786,22 +802,22 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
     else {
         /* If this is the first move then search it properly */
 #ifdef USE_PV_SEARCH
- 	  if (LegalMoves==1)
+          if (LegalMoves==1)
 #endif
         score = - Search(B,-tbeta,-talpha,newdepth,ply+1,gchk,newfifty,0,m);
 
        /* Otherwise this is NOT the first move - use Negascout search */
 #ifdef USE_PV_SEARCH
       else {
-	     /* First try a zero-width search.  This tests if this position is going
-	      * to improve alpha, but does not return an exact score.  It fails much
+             /* First try a zero-width search.  This tests if this position is going
+              * to improve alpha, but does not return an exact score.  It fails much
           * more quickly in the (hopefully more probable) case that the move does
           * NOT improve alpha. */
         score = - Search(B,-talpha-1,-talpha,newdepth,ply+1,gchk,newfifty,0,m);
-	       /* Looks like this move will improve alpha */
+               /* Looks like this move will improve alpha */
         if (score>talpha && score<tbeta && !AbortFlag)
-	         /* .. therefore search again with sensible bounds */
-	        score = - Search(B,-tbeta,-score,newdepth,ply+1,gchk,newfifty,0,m);
+                 /* .. therefore search again with sensible bounds */
+                score = - Search(B,-tbeta,-score,newdepth,ply+1,gchk,newfifty,0,m);
       }
 #endif
     }
@@ -829,23 +845,26 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
     if (!AbortFlag && score>best) {
       best = score;
       bestmove = m;
+
+      LocalTrapSet = TrapSet; // record if a deep trap is changing the move
+
        /* Have we improved alpha? (i.e. this an interesting move) */
 #ifdef NO_AB
       if (ply > 1 && best>talpha) {
 #else
       if (best>talpha) {
 #endif
-	      IncreaseCounts(Full[Moveno],ply,score,B->side);
-	       /* Fail-high cutoff.  This means that this move is so good that it will
-	        * never be played as our opponent will never allow it (he/she has better
-	        * alternatives) so don't bother continuing the search. */
+              IncreaseCounts(Full[Moveno],ply,score,B->side);
+               /* Fail-high cutoff.  This means that this move is so good that it will
+                * never be played as our opponent will never allow it (he/she has better
+                * alternatives) so don't bother continuing the search. */
         if (score>=tbeta) {
            /* Update the hash table & return the move score */
           BestMoveRet = bestmove;
-	        SortNodes++;
+                SortNodes++;
           HashUpdate(B,score,bestmove,depth,HASH_LOWER,threat,ply);
-	        if (LegalMoves==1) BestFirst++;
-	        return best;
+                if (LegalMoves==1) BestFirst++;
+                return best;
         }
         /* Print off the PV if we're posting to XBoard and this is the top ply and
          * we're not doing the IID loop. */
@@ -919,16 +938,17 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   if (AbortFlag && ply==0 && depth == (GlobalDepth*ONEPLY) && best>-INFINITY && InputFlag != INPUT_RESIGN)
     PrintThinking(best,B);
 
+  TrapSet = LocalTrapSet;
 
 
-	/******************************************************************************************** 
-	 * TRAPPY MINIMAX CODE
-	 * BEWARE: HERE BE DRAGONS
-	 *
-	 * This code is a mess. I apologize. I edit and re-edit it all the time
-	 * and commit randomly. It's in no state to be read by anyone,
-	 * probably even me. 
-	 ********************************************************************************************/
+        /******************************************************************************************** 
+         * TRAPPY MINIMAX CODE
+         * BEWARE: HERE BE DRAGONS
+         *
+         * This code is a mess. I apologize. I edit and re-edit it all the time
+         * and commit randomly. It's in no state to be read by anyone,
+         * probably even me. 
+         ********************************************************************************************/
 
 
 
@@ -937,45 +957,36 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   //printf(" TRAPPY? %d\n", GlobalDepth);
   /* Calculate trappiness */
   if (GlobalDepth == MAX_DEPTH && ply < GlobalDepth && ply % 2 == 1) {
-		/* I'm still not clear on why the minimax paper had code for
-		 * calculating the trappiness of even ply nodes, so I skip
-		 * them.
-		 */
+                /* I'm still not clear on why the minimax paper had code for
+                 * calculating the trappiness of even ply nodes, so I skip
+                 * them.
+                 */
     for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
       m = Full[Moveno].move;
       
-      TrapNode = TRUE; // I declared this for some other use
-                       // then didn't use it, so I re-purposed it
-											 // during a random debugging session...
-											 // If I weren't so lazy I'd make a better
-											 // variable name.
-      for (dI = GlobalDepth - 2; TrapNode && dI >= 0; dI--) {
+      AbortTrap = FALSE; // *try* to find a trap, but give up if we don't have enough information
+      for (dI = GlobalDepth - 2; !AbortTrap && dI >= 0; dI--) {
         if (TrapVectorRecorded[MFrom(m)][MTo(m)][dI+2]) {
           TScores[dI] = TrapVectorScore[MFrom(m)][MTo(m)][dI+2];
         } else {
-					// I have not convinced myself that this actually works:
-					// try to "fill in" holes in the TScores array by borrowing
-					// the next-higher value.
+          // I have not convinced myself that this actually works:
+          // try to "fill in" holes in the TScores array by borrowing
+          // the next-higher value.
           if (dI < GlobalDepth - 2) {
             TScores[dI] = TScores[dI+1];
           } else {
-            TrapNode = FALSE;
-#if TRAPPY_DEBUG == 1             
-  	    		//printf("Skip\n");
-#endif
+            AbortTrap = TRUE; // time to give up
             break;
           }
         }
       }
-
-      if (!TrapNode) {
-        TrapNode = TRUE;
+      if (AbortTrap) {
         continue;
       }
       Tfactor = trappiness(TScores[GlobalDepth-2], TScores, GlobalDepth - 2, ply);
       
-			// This doesn't match the pseudo-code from the minimax paper, but that's because
-			// as far as I can tell the pseudocode was wrong. 
+      // This doesn't match the pseudo-code from the minimax paper, but that's because
+      // as far as I can tell the pseudocode was wrong. 
       profit = best - TScores[GlobalDepth-2];
       if (profit <= 0) continue;
       trapQuality = profit * Tfactor;
@@ -983,25 +994,30 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
  
 
       if (Tfactor > 0 && adjEval >= best) {
-				PrintMove(m, TRUE, stdout);
+        PrintMove(m, TRUE, stdout);
         printf("\n*** YOU'VE ACTIVATED MY TRAP CARD!\n");
-        printf("Setting trap: Best = %d, score = %d, Tfactor = %f\n",
+        printf("Trap set at ply %d!\n", ply);
+        printf("Setting trap: Best = %d, score = %d, Tfactor = %f\n", 
             best,TScores[GlobalDepth-2], Tfactor);
-        printf("profit = %d scale = %f trapQuality %f adjEval = %d\n\n", profit, scale(trapQuality, best), trapQuality, adjEval);
-        for (dI = 0; dI <= GlobalDepth - 2; dI++) 
+        printf("profit = %d scale = %f trapQuality %f adjEval = %d\n\n", 
+            profit, scale(trapQuality, best), trapQuality, adjEval);
+        for (dI = 0; dI <= GlobalDepth - 2; dI++) {
           printf("TScores[%d] = %d\n",dI + 2, TScores[dI]);
+        }
         printf("\n");
         best = adjEval;
         bestmove = m;
+        TrapSet = TRUE;
       }
 #if TRAPPY_DEBUG == 1
-      else if (Tfactor > 0){
-				PrintMove(m, TRUE, stdout);
+      else if (Tfactor > 0.2) {
+        PrintMove(m, TRUE, stdout);
         printf("Skipping potential trap. Best = %d, score = %d, Tfactor = %f\n",
             best,TScores[GlobalDepth-2], Tfactor);
         printf("profit = %d scale = %f trapQuality %f adjEval = %d\n", profit, scale(trapQuality, best), trapQuality, adjEval);
-        for (dI = 0; dI <= GlobalDepth - 2; dI++) 
+        for (dI = 0; dI <= GlobalDepth - 2; dI++) {
           printf("TScores[%d] = %d\n",dI + 2, TScores[dI]);
+        }
       }
 #endif
 
@@ -1178,7 +1194,7 @@ int Quiesce(Board *B, const int alpha, const int beta, int ply, int fifty, int i
       bestmove = m;
       if (best>talpha) {
         IncreaseCounts(Full[Moveno],ply,score,B->side);
-	       /* Fail-high cutoff */
+               /* Fail-high cutoff */
         if (best>=tbeta) {
 #ifdef QUIESCENCE_STORE_CUTS
            /* Store beta cut nodes in the hash table */
@@ -1218,7 +1234,7 @@ int Quiesce(Board *B, const int alpha, const int beta, int ply, int fifty, int i
  * (7) All other moves, sorted by history score and a few other things.
  */
 int FilterMovelist(MOVE *movelist,MOVE *lastmove,Board *B, FullMove *Full,const int ply,
-		   const MOVE hashmove,const int inchk) {
+                   const MOVE hashmove,const int inchk) {
   MOVE *move = movelist;
   int score,bestscore=0,swapgain;
   int p,from,to,nmoves=0,capt,promote,foundhash=-1;
@@ -1317,7 +1333,7 @@ int FilterMovelist(MOVE *movelist,MOVE *lastmove,Board *B, FullMove *Full,const 
  * Return the number of semilegal moves.  We remember that several moves are cut
  * here because of Delta cuts and SEE cuts. */
 int FilterMovelistQui(MOVE *movelist,MOVE *lastmove,Board *B, FullMove *Full,const int ply,
-		      const int delta, MOVE hashmove) {
+                      const int delta, MOVE hashmove) {
   MOVE *move = movelist;
   Undo U;
   int score,evalscore,bestscore=0,foundhash=-1;
@@ -1644,7 +1660,7 @@ int RunParallel(Board *B,int depth, const int inchk, int fifty,int PreviousTime)
  * without any guesswork pruning and keeping track of the current depth so that we
  * can start distributing leaf nodes to PeerNode servers. */
 int SearchParallel(Board *B,const int alpha, const int beta, int depth, int ply,
-		const int inchk, int fifty, int Priority, MOVE LastMove, int PreviousCost, int ParentNode) {
+                const int inchk, int fifty, int Priority, MOVE LastMove, int PreviousCost, int ParentNode) {
   MOVE movelist[MAX_MOVES],m,*lastmove,hashmove=NO_MOVE,bestmove=NO_MOVE;
   int score = -INFINITY, best = -INFINITY, evalscore=0;
   int NMoves,Moveno,newfifty=fifty+1,p,pto,LegalMoves=0,gchk;
@@ -1787,7 +1803,7 @@ int SearchParallel(Board *B,const int alpha, const int beta, int depth, int ply,
       * (3) This move captures the piece that captured last move 
       * (4) The value of this piece equals the value of the target piece */
     if (ply>0 && IsCap[ply-1] && MTo(m) == MTo(LastMove) &&
-	      PieceValue[pto] == PieceValue[p])
+              PieceValue[pto] == PieceValue[p])
       {Extensions += RECAP_EXTEND;RecapExtensions++;}
 
      /* A Pawn Push Extension is used if we're moving a pawn to
@@ -1943,15 +1959,15 @@ int SearchParallel(Board *B,const int alpha, const int beta, int depth, int ply,
       if (best>ThisNode->talpha) {
         fprintf(stdout,"* [%d] Updating Alpha (%d -> %d)\n",ThisNode->ID,ThisNode->talpha,score);
         ThisNode->talpha = score;
-	      IncreaseCounts(Full[Moveno],ply,score);
-	       // Fail-high cutoff.
+              IncreaseCounts(Full[Moveno],ply,score);
+               // Fail-high cutoff.
         if (score>=ThisNode->tbeta) {
            /* Update the hash table & return the move score */
           BestMoveRet = bestmove;
-	        SortNodes++;
-	        if (LegalMoves==1) BestFirst++;
+                SortNodes++;
+                if (LegalMoves==1) BestFirst++;
           if (FirstIteration) fprintf(stdout,"* First Iteration Beta cut\n");
-	        return best;
+                return best;
         }
          /* Print off the move */
         if (ply==0) {
@@ -1996,7 +2012,7 @@ int SearchParallel(Board *B,const int alpha, const int beta, int depth, int ply,
 
 /* Distribute a node for analysis in the peer node system. */
 void DistributeNode(NODE *Node, Board *B,const int alpha, const int beta, int depth, int ply,
-		const int inchk, int fifty, int Priority, MOVE LastMove) {
+                const int inchk, int fifty, int Priority, MOVE LastMove) {
 #ifdef SEARCH_NATIVELY
   long int score;
   int TimeElapsed;
@@ -2008,56 +2024,56 @@ void DistributeNode(NODE *Node, Board *B,const int alpha, const int beta, int de
    * by a PeerNode. */
   // NODE hasn't yet been sent out
   if (!(Node->Awaiting)) {
-		
-		// Get the FEN for this board
-		BoardToFEN(B,FEN);
-		
-		// Get the new search depth for this node.
-		// Make sure that any fractional ply extensions are rounded up.
-		// Also, increase the depth slightly to benefit from the increased
-		// potential of NODE splitting.
-		newdepth = ((depth + ONEPLY + 1) / ONEPLY);
-		
-		// Predict the computational cost of this search, in relative units
-		PredictedCost = (int)((float)Node->cost * ExtendCost);
-		
-		// Check if this is likely to be an easy node.  If so then
-		// We should probably extend it by a bit.
+                
+                // Get the FEN for this board
+                BoardToFEN(B,FEN);
+                
+                // Get the new search depth for this node.
+                // Make sure that any fractional ply extensions are rounded up.
+                // Also, increase the depth slightly to benefit from the increased
+                // potential of NODE splitting.
+                newdepth = ((depth + ONEPLY + 1) / ONEPLY);
+                
+                // Predict the computational cost of this search, in relative units
+                PredictedCost = (int)((float)Node->cost * ExtendCost);
+                
+                // Check if this is likely to be an easy node.  If so then
+                // We should probably extend it by a bit.
 #ifdef EXTEND_EASY_NODES
-		if ((int)((float)PredictedCost * ExtendCost) < EASY_NODE) {
-			PredictedCost = (int)((float)Node->cost * ExtendCost * ExtendCost);
-			newdepth++;
-			fprintf(stdout,"Easy NODE - Depth Extended by 1 ply\n");
-		}
+                if ((int)((float)PredictedCost * ExtendCost) < EASY_NODE) {
+                        PredictedCost = (int)((float)Node->cost * ExtendCost * ExtendCost);
+                        newdepth++;
+                        fprintf(stdout,"Easy NODE - Depth Extended by 1 ply\n");
+                }
 #endif
-		
-		// If this node hasn't been searched deeply enough already then distribute it
-		if (Node->depth < newdepth) {
-			// Distribute this node to the SuperNode server
-			fprintf(stdout,"NODE [%d][%d] \"%s\" %d %d %d %d %d\n",
-				TableKey, Node->ID, FEN, newdepth, alpha, beta, Priority, PredictedCost);
-			Node->Done = FALSE;     // Search incomplete
-			Node->depth = newdepth; // Setup the depth
-			Node->Awaiting = TRUE;  // We've sent this node and we're awaiting a reply
-		}
-		// Otherwise, skip it
-		else {
-			fprintf(stdout,"** [%d] Skipping Node - depth already sufficient.  Score = %d\n",Node->ID, Node->score);
-			Node->Done = TRUE;
-			Node->Awaiting = FALSE;
-		}
+                
+                // If this node hasn't been searched deeply enough already then distribute it
+                if (Node->depth < newdepth) {
+                        // Distribute this node to the SuperNode server
+                        fprintf(stdout,"NODE [%d][%d] \"%s\" %d %d %d %d %d\n",
+                                TableKey, Node->ID, FEN, newdepth, alpha, beta, Priority, PredictedCost);
+                        Node->Done = FALSE;     // Search incomplete
+                        Node->depth = newdepth; // Setup the depth
+                        Node->Awaiting = TRUE;  // We've sent this node and we're awaiting a reply
+                }
+                // Otherwise, skip it
+                else {
+                        fprintf(stdout,"** [%d] Skipping Node - depth already sufficient.  Score = %d\n",Node->ID, Node->score);
+                        Node->Done = TRUE;
+                        Node->Awaiting = FALSE;
+                }
   }
   // Node has already been sent out.  Check alpha-beta values to see if they need
   // updating at all.
   else {
-		if (FirstIteration) {
-			fprintf(stdout,"** Warning - NODE %d already awaiting result on first iteration! (Done=%d) (A-B = %d,%d)\n",
-				Node->ID,Node->Done,Node->alpha,Node->beta);
-		}
-		if (Node->alpha != alpha || Node->beta != beta) {
-			// Update the CBS with the new alpha-beta values for this NODE
-			//        fprintf(stdout,"UPDATE [%d][%d] %d %d\n", TableKey, Node->ID, alpha, beta);     
-		}
+                if (FirstIteration) {
+                        fprintf(stdout,"** Warning - NODE %d already awaiting result on first iteration! (Done=%d) (A-B = %d,%d)\n",
+                                Node->ID,Node->Done,Node->alpha,Node->beta);
+                }
+                if (Node->alpha != alpha || Node->beta != beta) {
+                        // Update the CBS with the new alpha-beta values for this NODE
+                        //        fprintf(stdout,"UPDATE [%d][%d] %d %d\n", TableKey, Node->ID, alpha, beta);     
+                }
   }
 
   // Make sure we're up to date for this NODE's a-b bounds
