@@ -157,6 +157,21 @@ void PrintBoard(const Board B) {
   fprintf(stdout,"\n");
 }
 
+void PrintBoardFile(const Board B, FILE *f) {
+  int x,y;
+   
+  fprintf(f,"\n");
+   
+  for (y=0;y<8;y++) {
+    for (x=0;x<8;x++) {
+      PrintPieceFile(B.pieces[(y*8)+x], f);
+      fprintf(f," ");
+    }
+    fprintf(f,"\n");
+  }
+  fprintf(f,"\n");
+}
+
 /* Display a Bitboard schematically */
 void PrintBitboard(const BITBOARD B) {
   BITBOARD b=UNIT;
@@ -381,3 +396,23 @@ void PrintPiece(int p) {
    default        : break;
   }
 }
+
+void PrintPieceFile(int p, FILE *f) {
+  switch (p) {
+   case (empty)   : fprintf(f,"."); break;
+   case (wpawn)   : fprintf(f,"P"); break;
+   case (wrook)   : fprintf(f,"R"); break;
+   case (wknight) : fprintf(f,"N"); break;
+   case (wbishop) : fprintf(f,"B"); break;
+   case (wqueen)  : fprintf(f,"Q"); break;
+   case (wking)   : fprintf(f,"K"); break;
+   case (bpawn)   : fprintf(f,"p"); break;
+   case (brook)   : fprintf(f,"r"); break;
+   case (bknight) : fprintf(f,"n"); break;
+   case (bbishop) : fprintf(f,"b"); break;
+   case (bqueen)  : fprintf(f,"q"); break;
+   case (bking)   : fprintf(f,"k"); break;
+   default        : break;
+  }
+}
+

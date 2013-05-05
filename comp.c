@@ -77,10 +77,11 @@ MOVE Killer1[MAX_PV],Killer2[MAX_PV], MateKiller[MAX_PV], MoveToPlay;
 BOOL TBHit,AbortFlag,PrintedPV,CMFound=FALSE,IsCap[MAX_PV],QStore,QStoreAll,Pondering=FALSE, bEasyMove = FALSE;
 MOVE BestMoveRet;
 
-int TrapVectorScore[64][64][50] = {0};
-int TrapVectorRecorded[64][64][50] = {0};
+int TrapVectorScore[64][64][50][50] = {0};
+int TrapVectorRecorded[64][64][50][50] = {0};
 BOOL ENABLETRAP;
 BOOL TrapSet;
+int TrapsFound;
 
 #ifdef BEOSERVER
 extern int BenchmarkSpeed;
@@ -228,7 +229,8 @@ MOVE Comp(void) {
   memset(TrapVectorRecorded, 0, sizeof(TrapVectorRecorded));
   
   TrapSet = FALSE; // initially no trap has been set
-
+  
+  TrapsFound = 0; // initially no traps have been found
 
 
                   /*   ----===   Begin Iterative Deepening Loop   ===----   */
@@ -436,6 +438,8 @@ MOVE Comp(void) {
   if (TrapSet) {
     printf("Trap was set, and a non-ideal move is being chosen.\n");
   }
+
+writeTrapData(TrapSet, TrapsFound);
 
    /* Return the best move that we found */
   return Previous;
@@ -829,15 +833,9 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
 
      /* Undo the move */
     UndoMove(B,m,U);
-
-     /* Save score if TrapNode */
-    if (ply == 1) {
-      TrapVectorScore[MFrom(m)][MTo(m)][GlobalDepth] = score;
-      TrapVectorRecorded[MFrom(m)][MTo(m)][GlobalDepth] = TRUE;
-      //CurrentMove[Moveno] = score;
-      //printf("%d\n", GlobalDepth);
-      //printf("%d %d %d\n", MFrom(m), MTo(m), GlobalDepth);
-   }
+    
+	TrapVectorScore[MFrom(m)][MTo(m)][GlobalDepth][ply] = score;
+    TrapVectorRecorded[MFrom(m)][MTo(m)][GlobalDepth][ply] = TRUE;
 
      /*  ---------------====     HAVE WE IMPROVED OUR BEST SCORE?     ====------------- */
 
@@ -966,8 +964,8 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       
       AbortTrap = FALSE; // *try* to find a trap, but give up if we don't have enough information
       for (dI = GlobalDepth - 2; !AbortTrap && dI >= 0; dI--) {
-        if (TrapVectorRecorded[MFrom(m)][MTo(m)][dI+2]) {
-          TScores[dI] = TrapVectorScore[MFrom(m)][MTo(m)][dI+2];
+        if (TrapVectorRecorded[MFrom(m)][MTo(m)][dI+2][ply]) {
+          TScores[dI] = TrapVectorScore[MFrom(m)][MTo(m)][dI+2][ply];
         } else {
           // I have not convinced myself that this actually works:
           // try to "fill in" holes in the TScores array by borrowing
@@ -994,6 +992,10 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
  
 
       if (Tfactor > 0 && adjEval >= best) {
+        if (ply == 1  && profit > 1) {
+          WriteBoardData(m, bestmove, *B, profit, best, 
+              adjEval, TScores, GlobalDepth - 2, ply);
+        }
         PrintMove(m, TRUE, stdout);
         printf("\n*** YOU'VE ACTIVATED MY TRAP CARD!\n");
         printf("Trap set at ply %d!\n", ply);
@@ -1008,6 +1010,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
         best = adjEval;
         bestmove = m;
         TrapSet = TRUE;
+        TrapsFound++;
       }
 #if TRAPPY_DEBUG == 1
       else if (Tfactor > 0.2) {

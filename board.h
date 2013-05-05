@@ -25,5 +25,7 @@ void SetBoard(Board *, char *, BOOL);
 void ResetBoard(Board *);
 int Pts(Board, const int);
 void PrintPiece(int);
+void PrintBoardFile(const Board b, FILE *f);
+
 
 #endif          /* BOARD_H */
