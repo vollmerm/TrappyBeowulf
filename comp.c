@@ -77,8 +77,8 @@ MOVE Killer1[MAX_PV],Killer2[MAX_PV], MateKiller[MAX_PV], MoveToPlay;
 BOOL TBHit,AbortFlag,PrintedPV,CMFound=FALSE,IsCap[MAX_PV],QStore,QStoreAll,Pondering=FALSE, bEasyMove = FALSE;
 MOVE BestMoveRet;
 
-int TrapVectorScore[64][64][50][50] = {0};
-int TrapVectorRecorded[64][64][50][50] = {0};
+int TrapVectorScore[64][64][MAX_DEPTH+1][MAX_DEPTH+1][TRAP_KEY_SIZE] = {0};
+int TrapVectorRecorded[64][64][MAX_DEPTH+1][MAX_DEPTH+1][TRAP_KEY_SIZE] = {0};
 BOOL ENABLETRAP;
 BOOL TrapSet;
 int TrapsFound;
@@ -457,7 +457,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   int NMoves,Moveno,newfifty=fifty+1,ep_carry,p,pto,LegalMoves=0,gchk;
   int newdepth,nullreduction,Base_Extensions=0,Extensions=0,excess=0;
   int EntryType, EntryScore, SEEScore;
-  int adjEval, dI, TScores[MAX_MOVES], profit;
+  int adjEval, dI, TScores[MAX_MOVES], profit, skipCount;
   float Tfactor, trapQuality;
   BOOL TrapNode = (ply == 1);
   BOOL AbortTrap;
@@ -834,8 +834,10 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
      /* Undo the move */
     UndoMove(B,m,U);
     
-	TrapVectorScore[MFrom(m)][MTo(m)][GlobalDepth][ply] = score;
-    TrapVectorRecorded[MFrom(m)][MTo(m)][GlobalDepth][ply] = TRUE;
+    if (ply % 2 == 1 && ply <= MAX_TRAP_DEPTH) {
+      TrapVectorScore[MFrom(m)][MTo(m)][GlobalDepth][ply][B->Key % TRAP_KEY_SIZE] = score;
+      TrapVectorRecorded[MFrom(m)][MTo(m)][GlobalDepth][ply][B->Key % TRAP_KEY_SIZE] = TRUE;
+    }
 
      /*  ---------------====     HAVE WE IMPROVED OUR BEST SCORE?     ====------------- */
 
@@ -954,23 +956,27 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
 #if TRAPPY == 1
   //printf(" TRAPPY? %d\n", GlobalDepth);
   /* Calculate trappiness */
-  if (GlobalDepth == MAX_DEPTH && ply < GlobalDepth && ply % 2 == 1) {
+  if (GlobalDepth == MAX_DEPTH && ply < GlobalDepth && ply % 2 == 1 && ply <= MAX_TRAP_DEPTH) {
                 /* I'm still not clear on why the minimax paper had code for
                  * calculating the trappiness of even ply nodes, so I skip
                  * them.
                  */
     for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
       m = Full[Moveno].move;
-      
+
+      U = DoMove(B,m);
+      GenerateHashKey(B);
       AbortTrap = FALSE; // *try* to find a trap, but give up if we don't have enough information
+      skipCount = 0;
       for (dI = GlobalDepth - 2; !AbortTrap && dI >= 0; dI--) {
-        if (TrapVectorRecorded[MFrom(m)][MTo(m)][dI+2][ply]) {
-          TScores[dI] = TrapVectorScore[MFrom(m)][MTo(m)][dI+2][ply];
+        if (TrapVectorRecorded[MFrom(m)][MTo(m)][dI+2][ply][B->Key % TRAP_KEY_SIZE]) {
+          TScores[dI] = TrapVectorScore[MFrom(m)][MTo(m)][dI+2][ply][B->Key % TRAP_KEY_SIZE];
         } else {
           // I have not convinced myself that this actually works:
           // try to "fill in" holes in the TScores array by borrowing
           // the next-higher value.
-          if (dI < GlobalDepth - 2) {
+          if (dI < GlobalDepth - 2 && skipCount < MAX_DEPTH - 2) {
+            skipCount++;
             TScores[dI] = TScores[dI+1];
           } else {
             AbortTrap = TRUE; // time to give up
@@ -978,6 +984,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
           }
         }
       }
+      UndoMove(B,m,U);
       if (AbortTrap) {
         continue;
       }
@@ -992,7 +999,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
  
 
       if (Tfactor > 0 && adjEval >= best) {
-        if (ply == 1  && profit > 1) {
+        if (ply == 1  && profit > 10) {
           WriteBoardData(m, bestmove, *B, profit, best, 
               adjEval, TScores, GlobalDepth - 2, ply);
         }
