@@ -990,21 +990,24 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
         continue;
       }
       Tfactor = trappiness(TScores[GlobalDepth-2], TScores, GlobalDepth - 2, ply);
-      
+      if (Tfactor == 0) { continue; }
       // This doesn't match the pseudo-code from the minimax paper, but that's because
       // as far as I can tell the pseudocode was wrong. 
       profit = rawEval - TScores[GlobalDepth-2];
-      if (profit <= 0) continue;
       trapQuality = profit * Tfactor;
+	  printf("Tfactor = %d, tQ = %d, rawEval = %d, TScore=%d\n",Tfactor,trapQuality,rawEval,TScores[GlobalDepth-2]);
       if (trapQuality > bestTrapQuality) {
         bestTrapQuality = trapQuality;
         adjEval = rawEval + ceil(scale(bestTrapQuality, rawEval));
-        if (adjEval > best) {
-          best = adjEval;
+		if (adjEval > rawEval) {
           if (ply == 1) {
             WriteBoardData(m, bestmove, *B, Current_Board, profit, rawEval, 
                 adjEval, TScores, GlobalDepth - 2, ply);
           }
+		  TrapsFound++;
+		}
+        if (adjEval > best && bestmove != m) {
+          best = adjEval;
           PrintMove(m, TRUE, stdout);
           printf("\n*** YOU'VE ACTIVATED MY TRAP CARD!\n");
           printf("Trap set at ply %d!\n", ply);
@@ -1016,9 +1019,9 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
             printf("TScores[%d] = %d\n",dI + 2, TScores[dI]);
           }
           printf("\n");
+		  
           bestmove = m;
           TrapSet = TRUE;
-		  TrapsFound++;
         } 
 #if TRAPPY_DEBUG == 1
         else if (Tfactor > 0.2) {

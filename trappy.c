@@ -125,7 +125,7 @@ void WriteBoardData(MOVE trapm, MOVE bestm, Board b, Board c, int profit, int be
   fp = fopen("boardout.dat","a");
   if (fp == NULL) {
     printf("Could not open boardout.dat for writing.\n");
-    return;
+    exit(1);
   }
   fprintf(fp, "Best move: ", best);
   PrintMove(bestm, TRUE, fp);
