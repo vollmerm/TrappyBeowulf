@@ -4,6 +4,7 @@
 #include "moves.h"
 #include "board.h"
 #include "common.h"
+#include "utils.h"
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -16,13 +17,13 @@
 #define TRAP_SCALE 	1
 //#define NO_AB
 //#define NO_ORDER
-#define TRAP_CEILING    0.3    // Trap evaluations scaled to never exceed a percentage
+#define TRAP_CEILING    0.5    // Trap evaluations scaled to never exceed a percentage
 			       // of the best guaranteed evaluation.
 #define TRAP_KEY_SIZE   51
-#define MAX_TRAP_DEPTH  6
+#define MAX_TRAP_DEPTH  3
 float trappiness(int M, const int * Scores, int scoreCount, int ply);
 float scale(float T, int M);
 void writeTrapData(int, int);
-void WriteBoardData(MOVE trapm, MOVE bestm, Board b, int profit, int best, int adj, 
+void WriteBoardData(MOVE trapm, MOVE bestm, Board b, Board c, int profit, int best, int adj, 
     int *scores, int scoresCount, int ply);
 #endif

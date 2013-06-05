@@ -457,8 +457,8 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
   int NMoves,Moveno,newfifty=fifty+1,ep_carry,p,pto,LegalMoves=0,gchk;
   int newdepth,nullreduction,Base_Extensions=0,Extensions=0,excess=0;
   int EntryType, EntryScore, SEEScore;
-  int adjEval, dI, TScores[MAX_MOVES], profit, skipCount;
-  float Tfactor, trapQuality;
+  int rawEval, adjEval, dI, TScores[MAX_MOVES], profit, skipCount;
+  float Tfactor, trapQuality, bestTrapQuality;
   BOOL TrapNode = (ply == 1);
   BOOL AbortTrap;
   BOOL DoNull = TRUE, IsCapTopMove = FALSE;
@@ -845,7 +845,6 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
     if (!AbortFlag && score>best) {
       best = score;
       bestmove = m;
-
       LocalTrapSet = TrapSet; // record if a deep trap is changing the move
 
        /* Have we improved alpha? (i.e. this an interesting move) */
@@ -961,6 +960,8 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
                  * calculating the trappiness of even ply nodes, so I skip
                  * them.
                  */
+    rawEval = best;
+    bestTrapQuality = 0;
     for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
       m = Full[Moveno].move;
 
@@ -992,45 +993,45 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       
       // This doesn't match the pseudo-code from the minimax paper, but that's because
       // as far as I can tell the pseudocode was wrong. 
-      profit = best - TScores[GlobalDepth-2];
+      profit = rawEval - TScores[GlobalDepth-2];
       if (profit <= 0) continue;
       trapQuality = profit * Tfactor;
-      adjEval = TScores[GlobalDepth-2] + ceil(scale(trapQuality, best));
- 
-
-      if (Tfactor > 0 && adjEval >= best) {
-        if (ply == 1  && profit > 10) {
-          WriteBoardData(m, bestmove, *B, profit, best, 
-              adjEval, TScores, GlobalDepth - 2, ply);
-        }
-        PrintMove(m, TRUE, stdout);
-        printf("\n*** YOU'VE ACTIVATED MY TRAP CARD!\n");
-        printf("Trap set at ply %d!\n", ply);
-        printf("Setting trap: Best = %d, score = %d, Tfactor = %f\n", 
-            best,TScores[GlobalDepth-2], Tfactor);
-        printf("profit = %d scale = %f trapQuality %f adjEval = %d\n\n", 
-            profit, scale(trapQuality, best), trapQuality, adjEval);
-        for (dI = 0; dI <= GlobalDepth - 2; dI++) {
-          printf("TScores[%d] = %d\n",dI + 2, TScores[dI]);
-        }
-        printf("\n");
-        best = adjEval;
-        bestmove = m;
-        TrapSet = TRUE;
-        TrapsFound++;
-      }
+      if (trapQuality > bestTrapQuality) {
+        bestTrapQuality = trapQuality;
+        adjEval = rawEval + ceil(scale(bestTrapQuality, rawEval));
+        if (adjEval > best) {
+          best = adjEval;
+          if (ply == 1) {
+            WriteBoardData(m, bestmove, *B, Current_Board, profit, rawEval, 
+                adjEval, TScores, GlobalDepth - 2, ply);
+          }
+          PrintMove(m, TRUE, stdout);
+          printf("\n*** YOU'VE ACTIVATED MY TRAP CARD!\n");
+          printf("Trap set at ply %d!\n", ply);
+          printf("Setting trap: rawEva; = %d, score = %d, Tfactor = %f\n", 
+              rawEval,TScores[GlobalDepth-2], Tfactor);
+          printf("profit = %d scale = %f trapQuality %f adjEval = %d\n\n", 
+              profit, ceil(scale(trapQuality, rawEval)), trapQuality, adjEval);
+          for (dI = 0; dI <= GlobalDepth - 2; dI++) {
+            printf("TScores[%d] = %d\n",dI + 2, TScores[dI]);
+          }
+          printf("\n");
+          bestmove = m;
+          TrapSet = TRUE;
+		  TrapsFound++;
+        } 
 #if TRAPPY_DEBUG == 1
-      else if (Tfactor > 0.2) {
-        PrintMove(m, TRUE, stdout);
-        printf("Skipping potential trap. Best = %d, score = %d, Tfactor = %f\n",
-            best,TScores[GlobalDepth-2], Tfactor);
-        printf("profit = %d scale = %f trapQuality %f adjEval = %d\n", profit, scale(trapQuality, best), trapQuality, adjEval);
-        for (dI = 0; dI <= GlobalDepth - 2; dI++) {
-          printf("TScores[%d] = %d\n",dI + 2, TScores[dI]);
+        else if (Tfactor > 0.2) {
+          PrintMove(m, TRUE, stdout);
+          printf("Skipping potential trap. Best = %d, score = %d, Tfactor = %f\n",
+              best,TScores[GlobalDepth-2], Tfactor);
+          printf("profit = %d scale = %f trapQuality %f adjEval = %d\n", profit, scale(trapQuality, best), trapQuality, adjEval);
+          for (dI = 0; dI <= GlobalDepth - 2; dI++) {
+            printf("TScores[%d] = %d\n",dI + 2, TScores[dI]);
+          }
         }
-      }
 #endif
-
+      }
     }
   }
 
