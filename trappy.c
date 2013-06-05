@@ -103,6 +103,7 @@ float scale(float T, int best) {
 }
 
 void writeTrapData(int TrapSet, int TrapsFound) {
+/*
   FILE *fp;
   fp = fopen("trapresults.csv","a");
   if (fp == NULL) {
@@ -111,14 +112,17 @@ void writeTrapData(int TrapSet, int TrapsFound) {
   }
   fprintf(fp,"%d,%d\n", TrapSet, TrapsFound);
   fclose(fp);
-
+*/
 }
 
-void WriteBoardData(MOVE trapm, MOVE bestm, Board b, int profit, int best, int adj, 
+void WriteBoardData(MOVE trapm, MOVE bestm, Board b, Board c, int profit, int best, int adj, 
     int *scores, int scoresCount, int ply) {
   FILE *fp;
+  char FEN1[FILENAME_MAX],FEN2[FILENAME_MAX];
+  BoardToFEN(&b,FEN1);
+  BoardToFEN(&c,FEN2);
   int i;
-  fp = fopen("boardout3.dat","a");
+  fp = fopen("boardout.dat","a");
   if (fp == NULL) {
     printf("Could not open boardout.dat for writing.\n");
     return;
@@ -132,8 +136,10 @@ void WriteBoardData(MOVE trapm, MOVE bestm, Board b, int profit, int best, int a
   fprintf(fp, "Profit: %d \n", profit);
   fprintf(fp, "Adjusted trap evaluation: %d \n", adj);
   fprintf(fp, "Ply: %d \n", ply);
-  fprintf(fp, "Board: \n");
+  fprintf(fp, "Board: \n%s", FEN1);
   PrintBoardFile(b,fp);
+  fprintf(fp, "Root Board: \n%s", FEN2);
+  PrintBoardFile(c,fp);
   for (i = 0; i<=scoresCount; i++) {
     fprintf(fp, "TScores[%d] = %d\n", i+2, *(scores + i));
   }

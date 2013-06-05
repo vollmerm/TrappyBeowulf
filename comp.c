@@ -975,7 +975,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
           // I have not convinced myself that this actually works:
           // try to "fill in" holes in the TScores array by borrowing
           // the next-higher value.
-          if (dI < GlobalDepth - 2 && skipCount < MAX_DEPTH - 2) {
+          if (dI < GlobalDepth - 2 && skipCount < MAX_DEPTH - 3) {
             skipCount++;
             TScores[dI] = TScores[dI+1];
           } else {
@@ -996,11 +996,10 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       if (profit <= 0) continue;
       trapQuality = profit * Tfactor;
       adjEval = TScores[GlobalDepth-2] + ceil(scale(trapQuality, best));
- 
 
-      if (Tfactor > 0 && adjEval >= best) {
-        if (ply == 1  && profit > 10) {
-          WriteBoardData(m, bestmove, *B, profit, best, 
+      if (adjEval >= best && m != bestmove) {
+        if (profit > 20) {
+          WriteBoardData(m, bestmove, *B, Current_Board, profit, best, 
               adjEval, TScores, GlobalDepth - 2, ply);
         }
         PrintMove(m, TRUE, stdout);
