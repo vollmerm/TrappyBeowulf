@@ -17,13 +17,13 @@
 #define TRAP_SCALE 	0
 //#define NO_AB
 //#define NO_ORDER
-#define TRAP_CEILING    0.75    // Trap evaluations scaled to never exceed a percentage
+#define TRAP_CEILING    1    // Trap evaluations scaled to never exceed a percentage
 			       // of the best guaranteed evaluation.
-#define TRAP_KEY_SIZE   101
-#define MAX_TRAP_DEPTH  1
+#define TRAP_KEY_SIZE   151
+#define MAX_TRAP_DEPTH  5
 float trappiness(int M, const int * Scores, int scoreCount, int ply);
 float scale(float T, int M);
 void writeTrapData(int, int);
-void WriteBoardData(MOVE trapm, MOVE bestm, Board b, Board c, int profit, int best, int adj, 
+void WriteBoardData(MOVE trapm, MOVE bestm, Board b, Board c, int best, int adj, 
     int *scores, int scoresCount, int ply);
 #endif

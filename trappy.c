@@ -115,7 +115,7 @@ void writeTrapData(int TrapSet, int TrapsFound) {
 
 }
 
-void WriteBoardData(MOVE trapm, MOVE bestm, Board b, Board c, int profit, int best, int adj, 
+void WriteBoardData(MOVE trapm, MOVE bestm, Board b, Board c, int best, int adj, 
     int *scores, int scoresCount, int ply) {
   FILE *fp;
   int i;
@@ -135,7 +135,6 @@ void WriteBoardData(MOVE trapm, MOVE bestm, Board b, Board c, int profit, int be
   fprintf(fp, "\n");
   fprintf(fp, "Guaranteed score: %d \n", best);
   fprintf(fp, "Trap score: %d \n", *(scores + scoresCount));
-  fprintf(fp, "Profit: %d \n", profit);
   fprintf(fp, "Adjusted trap evaluation: %d \n", adj);
   fprintf(fp, "Ply: %d \n", ply);
   fprintf(fp, "Board: \n%s", FEN1);

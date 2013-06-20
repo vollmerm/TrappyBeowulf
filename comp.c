@@ -452,7 +452,7 @@ writeTrapData(TrapSet, TrapsFound);
  * Reinefeld's www page for a paper detailing the algorithm. */
 int Search(Board *B,const int alpha, const int beta, int depth, int ply,
                 const int inchk, int fifty, int NullDepth, MOVE LastMove) {
-  MOVE movelist[MAX_MOVES],m,*lastmove,hashmove=NO_MOVE,bestmove=NO_MOVE;
+  MOVE movelist[MAX_MOVES],m,*lastmove,hashmove=NO_MOVE,bestmove=NO_MOVE,trapMove=NO_MOVE;
   int score = -INFINITY, best = -INFINITY, evalscore=0;
   int NMoves,Moveno,newfifty=fifty+1,ep_carry,p,pto,LegalMoves=0,gchk;
   int newdepth,nullreduction,Base_Extensions=0,Extensions=0,excess=0;
@@ -995,46 +995,33 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       // as far as I can tell the pseudocode was wrong. 
       profit = rawEval - TScores[GlobalDepth-2];
       trapQuality = profit * Tfactor;
-	  printf("Tfactor = %d, tQ = %d, rawEval = %d, TScore=%d\n",Tfactor,trapQuality,rawEval,TScores[GlobalDepth-2]);
+	    //printf("Tfactor = %f, tQ = %f, rawEval = %d, TScore=%d\n",Tfactor,trapQuality,rawEval,TScores[GlobalDepth-2]);
       if (trapQuality > bestTrapQuality) {
         bestTrapQuality = trapQuality;
-        adjEval = rawEval + ceil(scale(bestTrapQuality, rawEval));
-		if (adjEval > rawEval) {
-          if (ply == 1) {
-            WriteBoardData(m, bestmove, *B, Current_Board, profit, rawEval, 
-                adjEval, TScores, GlobalDepth - 2, ply);
-          }
-		  TrapsFound++;
-		}
-        if (adjEval > best && bestmove != m) {
-          best = adjEval;
-          PrintMove(m, TRUE, stdout);
-          printf("\n*** YOU'VE ACTIVATED MY TRAP CARD!\n");
-          printf("Trap set at ply %d!\n", ply);
-          printf("Setting trap: rawEva; = %d, score = %d, Tfactor = %f\n", 
-              rawEval,TScores[GlobalDepth-2], Tfactor);
-          printf("profit = %d scale = %f trapQuality %f adjEval = %d\n\n", 
-              profit, ceil(scale(trapQuality, rawEval)), trapQuality, adjEval);
-          for (dI = 0; dI <= GlobalDepth - 2; dI++) {
-            printf("TScores[%d] = %d\n",dI + 2, TScores[dI]);
-          }
-          printf("\n");
-		  
-          bestmove = m;
-          TrapSet = TRUE;
-        } 
-#if TRAPPY_DEBUG == 1
-        else if (Tfactor > 0.2) {
-          PrintMove(m, TRUE, stdout);
-          printf("Skipping potential trap. Best = %d, score = %d, Tfactor = %f\n",
-              best,TScores[GlobalDepth-2], Tfactor);
-          printf("profit = %d scale = %f trapQuality %f adjEval = %d\n", profit, scale(trapQuality, best), trapQuality, adjEval);
-          for (dI = 0; dI <= GlobalDepth - 2; dI++) {
-            printf("TScores[%d] = %d\n",dI + 2, TScores[dI]);
+        trapMove = m;
+	    }
+    }
+    if (bestTrapQuality != 0) { 
+      adjEval = rawEval + ceil(scale(bestTrapQuality, rawEval));
+      if (adjEval > best && bestmove != trapMove) {
+        U = DoMove(B,trapMove);
+        for (dI = GlobalDepth - 2; dI >= 0; dI--) {
+          if (TrapVectorRecorded[MFrom(trapMove)][MTo(trapMove)][dI+2][ply][B->Key % TRAP_KEY_SIZE]) {
+            TScores[dI] = TrapVectorScore[MFrom(trapMove)][MTo(trapMove)][dI+2][ply][B->Key % TRAP_KEY_SIZE];
+          } else {
+              TScores[dI] = TScores[dI+1];
           }
         }
-#endif
-      }
+        UndoMove(B,trapMove,U);
+        if (ply == 1) {
+          WriteBoardData(trapMove, bestmove, *B, Current_Board, rawEval, 
+              adjEval, TScores, GlobalDepth - 2, ply);
+        }
+        TrapsFound++;
+        best = adjEval;
+        bestmove = trapMove;
+        TrapSet = TRUE;
+      } 
     }
   }
 
