@@ -78,8 +78,7 @@ float scale(float T, int best) {
 #if TRAP_SCALE == 1
   int M = abs(best);
   float min = 0, max = M*2, a = 0, b = M*TRAP_CEILING;
-  printf("SCALE: M = %d, T = %f\n", M, T);
-  if (M <= 1) return T;
+  if (M <= 1) return 1;
   if (T < a) return 0;
   if (T > M*2) return M*TRAP_CEILING;
   return ((b-a)*(T-min))/(max-min);

@@ -439,7 +439,7 @@ MOVE Comp(void) {
     printf("Trap was set, and a non-ideal move is being chosen.\n");
   }
 
-writeTrapData(TrapSet, TrapsFound);
+//writeTrapData(TrapSet, TrapsFound);
 
    /* Return the best move that we found */
   return Previous;
@@ -955,7 +955,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
 #if TRAPPY == 1
   //printf(" TRAPPY? %d\n", GlobalDepth);
   /* Calculate trappiness */
-  if (GlobalDepth == MAX_DEPTH && ply < GlobalDepth && ply % 2 == 1 && ply <= MAX_TRAP_DEPTH) {
+  if (GlobalDepth >= MAX_DEPTH && ply < GlobalDepth && ply % 2 == 1 && ply <= MAX_TRAP_DEPTH) {
                 /* I'm still not clear on why the minimax paper had code for
                  * calculating the trappiness of even ply nodes, so I skip
                  * them.
@@ -964,7 +964,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
     bestTrapQuality = 0;
     for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
       m = Full[Moveno].move;
-
+      if (m == bestmove) continue;
       U = DoMove(B,m);
       GenerateHashKey(B);
       AbortTrap = FALSE; // *try* to find a trap, but give up if we don't have enough information
@@ -991,29 +991,29 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       }
       Tfactor = trappiness(TScores[GlobalDepth-2], TScores, GlobalDepth - 2, ply);
       if (Tfactor == 0) { continue; }
-      // This doesn't match the pseudo-code from the minimax paper, but that's because
-      // as far as I can tell the pseudocode was wrong. 
       profit = rawEval - TScores[GlobalDepth-2];
       trapQuality = profit * Tfactor;
-	    //printf("Tfactor = %f, tQ = %f, rawEval = %d, TScore=%d\n",Tfactor,trapQuality,rawEval,TScores[GlobalDepth-2]);
+      //printf("Tfactor = %f, tQ = %f, rawEval = %d, TScore=%d\n",Tfactor,trapQuality,rawEval,TScores[GlobalDepth-2]);
       if (trapQuality > bestTrapQuality) {
+        printf("New best trap: tq = %f\n", trapQuality);
         bestTrapQuality = trapQuality;
         trapMove = m;
-	    }
+      }
     }
     if (bestTrapQuality != 0) { 
       adjEval = rawEval + ceil(scale(bestTrapQuality, rawEval));
-      if (adjEval > best && bestmove != trapMove) {
+      printf("Adding %d to score for ply %d move to yield %d.\n", adjEval-rawEval, ply, adjEval);
+      if (adjEval > best) {
         U = DoMove(B,trapMove);
         for (dI = GlobalDepth - 2; dI >= 0; dI--) {
           if (TrapVectorRecorded[MFrom(trapMove)][MTo(trapMove)][dI+2][ply][B->Key % TRAP_KEY_SIZE]) {
             TScores[dI] = TrapVectorScore[MFrom(trapMove)][MTo(trapMove)][dI+2][ply][B->Key % TRAP_KEY_SIZE];
           } else {
-              TScores[dI] = TScores[dI+1];
+            TScores[dI] = TScores[dI+1];
           }
         }
         UndoMove(B,trapMove,U);
-        if (ply == 1) {
+        if (profit > 15) {
           WriteBoardData(trapMove, bestmove, *B, Current_Board, rawEval, 
               adjEval, TScores, GlobalDepth - 2, ply);
         }
