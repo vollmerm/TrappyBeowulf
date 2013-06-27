@@ -16,11 +16,11 @@
 #define TRAP_METHOD     3      // Methods: 1. median, 2. best value, 3. last value
 #define TRAP_SCALE 	0
 #define NO_AB
-//#define NO_ORDER
+#define NO_ORDER
 #define TRAP_CEILING    0.5    // Trap evaluations scaled to never exceed a percentage
 			       // of the best guaranteed evaluation.
-#define TRAP_KEY_SIZE   51
-#define MAX_TRAP_DEPTH  2
+#define TRAP_KEY_SIZE   101
+#define MAX_TRAP_DEPTH  5
 float trappiness(int M, const int * Scores, int scoreCount, int ply);
 float scale(float T, int M);
 void writeTrapData(int, int);
