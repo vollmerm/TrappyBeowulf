@@ -42,14 +42,24 @@ int findBiggest(const int * Scores, int scoreCount) {
   return max;
 }
 
+int trapDepth(const int * Scores, int score, int scoreCount) {
+  int i;
+  for (i = scoreCount - 1; Scores[i] != score; i--);
+  return i;
+}
+
 float trappiness(int last, const int * Scores, int scoreCount, int ply) {
-  int inner;
+  int inner, distance;
   if (TRAP_METHOD == 1)
     inner = findMedian(Scores, scoreCount);
   else if (TRAP_METHOD == 2)
     inner = findBiggest(Scores, scoreCount);
   else 
     inner = *(Scores + scoreCount-1);
+  distance = trapDepth(Scores, inner, scoreCount);
+  if (distance > scoreCount/2) {
+    inner += distance - scoreCount/2;
+  }
   //printf("Trappiness inner %d last %d\n",inner,last);
   int absLast = abs(last);
   //if (absLast == 0) { absLast = 1; }
