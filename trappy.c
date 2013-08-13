@@ -42,14 +42,24 @@ int findBiggest(const int * Scores, int scoreCount) {
   return max;
 }
 
+int trapDepth(const int * Scores, int score, int scoreCount) {
+  int i;
+  for (i = scoreCount - 1; Scores[i] != score; i--);
+  return i;
+}
+
 float trappiness(int last, const int * Scores, int scoreCount, int ply) {
-  int inner;
+  int inner, distance;
   if (TRAP_METHOD == 1)
     inner = findMedian(Scores, scoreCount);
   else if (TRAP_METHOD == 2)
     inner = findBiggest(Scores, scoreCount);
   else 
     inner = *(Scores + scoreCount-1);
+  distance = trapDepth(Scores, inner, scoreCount);
+  if (distance > scoreCount/2) {
+    inner += distance - scoreCount/2;
+  }
   //printf("Trappiness inner %d last %d\n",inner,last);
   int absLast = abs(last);
   //if (absLast == 0) { absLast = 1; }
@@ -78,7 +88,7 @@ float scale(float T, int best) {
 #if TRAP_SCALE == 1
   int M = abs(best);
   float min = 0, max = M*2, a = 0, b = M*TRAP_CEILING;
-  if (best <= 1) return T;
+  if (M <= 1) return 1;
   if (T < a) return 0;
   if (T > M*2) return M*TRAP_CEILING;
   return ((b-a)*(T-min))/(max-min);
@@ -115,7 +125,7 @@ void writeTrapData(int TrapSet, int TrapsFound) {
 */
 }
 
-void WriteBoardData(MOVE trapm, MOVE bestm, Board b, Board c, int profit, int best, int adj, 
+void WriteBoardData(MOVE trapm, MOVE bestm, Board b, Board c, int best, int adj, 
     int *scores, int scoresCount, int ply) {
   FILE *fp;
   char FEN1[FILENAME_MAX],FEN2[FILENAME_MAX];
@@ -125,15 +135,16 @@ void WriteBoardData(MOVE trapm, MOVE bestm, Board b, Board c, int profit, int be
   fp = fopen("boardout.dat","a");
   if (fp == NULL) {
     printf("Could not open boardout.dat for writing.\n");
-    return;
+    exit(1);
   }
   fprintf(fp, "Best move: ", best);
   PrintMove(bestm, TRUE, fp);
+  fprintf(fp, "\n");
   fprintf(fp, "Trap move: ");
   PrintMove(trapm, TRUE, fp);
+  fprintf(fp, "\n");
   fprintf(fp, "Guaranteed score: %d \n", best);
   fprintf(fp, "Trap score: %d \n", *(scores + scoresCount));
-  fprintf(fp, "Profit: %d \n", profit);
   fprintf(fp, "Adjusted trap evaluation: %d \n", adj);
   fprintf(fp, "Ply: %d \n", ply);
   fprintf(fp, "Board: \n%s", FEN1);
