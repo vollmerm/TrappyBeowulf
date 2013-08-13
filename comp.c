@@ -995,7 +995,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       trapQuality = profit * Tfactor;
       //printf("Tfactor = %f, tQ = %f, rawEval = %d, TScore=%d\n",Tfactor,trapQuality,rawEval,TScores[GlobalDepth-2]);
       if (trapQuality > bestTrapQuality) {
-        printf("New best trap: tq = %f\n", trapQuality);
+        //printf("New best trap: tq = %f\n", trapQuality);
         bestTrapQuality = trapQuality;
         trapMove = m;
       }
@@ -1005,6 +1005,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       printf("Adding %d to score for ply %d move to yield %d.\n", adjEval-rawEval, ply, adjEval);
       if (adjEval > best) {
         U = DoMove(B,trapMove);
+        /*
         for (dI = GlobalDepth - 2; dI >= 0; dI--) {
           if (TrapVectorRecorded[MFrom(trapMove)][MTo(trapMove)][dI+2][ply][B->Key % TRAP_KEY_SIZE]) {
             TScores[dI] = TrapVectorScore[MFrom(trapMove)][MTo(trapMove)][dI+2][ply][B->Key % TRAP_KEY_SIZE];
@@ -1012,11 +1013,14 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
             TScores[dI] = TScores[dI+1];
           }
         }
+        */
         UndoMove(B,trapMove,U);
+        /*
         if (profit > 15) {
           WriteBoardData(trapMove, bestmove, *B, Current_Board, rawEval, 
               adjEval, TScores, GlobalDepth - 2, ply);
         }
+        */
         TrapsFound++;
         best = adjEval;
         bestmove = trapMove;
