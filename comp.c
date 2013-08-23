@@ -82,6 +82,7 @@ int TrapVectorRecorded[64][64][MAX_DEPTH+1][MAX_DEPTH+1][TRAP_KEY_SIZE] = {0};
 BOOL ENABLETRAP;
 BOOL TrapSet;
 int TrapsFound;
+MOVE topmove;
 
 #ifdef BEOSERVER
 extern int BenchmarkSpeed;
@@ -653,7 +654,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
 
     /* Get the highest scoring move from those left on the list.  Put it at the top. */
 #ifdef NO_ORDER
-    if (ply > 1)
+    if (ply != 1)
 #endif
       SortFrom(Full,Moveno,NMoves);
     
@@ -676,6 +677,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
 
      /* Do the move */
     U = DoMove(B,m);
+
 
      /* Filter out illegal moves which leave us in check.
       * If we're in check before the move then this has already been done. */
@@ -791,7 +793,8 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
         RazorCuts++;
       }
     }
-    
+     if (ply == 0) { topmove = m; }
+   
           /* -----------------====     RECURSE TO THE NEXT PLY     ====---------------- */
      
      /* If at bottom depth then return quiescence score.  Basically, we find a quiet
@@ -799,11 +802,11 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       * 'horizon effect' where bad captures are pushed off the end of the search tree
       * causing total mis-evaluation of the position.  (See notes at top of Quiesce()
       * function below). */
-    if (newdepth<ONEPLY) 
-      score = - Quiesce(B,-tbeta,-talpha,ply+1,newfifty, gchk);
 
+    if (newdepth<ONEPLY) {
+      score = - Quiesce(B,-tbeta,-talpha,ply+1,newfifty, gchk);
     /* Recurse to the next ply using negascout search heuristic */
-    else {
+    } else {
         /* If this is the first move then search it properly */
 #ifdef USE_PV_SEARCH
           if (LegalMoves==1)
@@ -834,7 +837,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
      /* Undo the move */
     UndoMove(B,m,U);
     
-    if (ply % 2 == 1 && ply <= MAX_TRAP_DEPTH) {
+    if (ply <= MAX_TRAP_DEPTH && ply % 2 == 1) {
       TrapVectorScore[MFrom(m)][MTo(m)][GlobalDepth][ply][B->Key % TRAP_KEY_SIZE] = score;
       TrapVectorRecorded[MFrom(m)][MTo(m)][GlobalDepth][ply][B->Key % TRAP_KEY_SIZE] = TRUE;
     }
@@ -845,6 +848,12 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
     if (!AbortFlag && score>best) {
       best = score;
       bestmove = m;
+      if (ply == 0 && GlobalDepth >= MAX_DEPTH) {
+        printf("*** BEST: ");
+        PrintMove(bestmove, TRUE, stdout);
+        printf(" %d", best);
+        printf("\n");
+      }
       LocalTrapSet = TrapSet; // record if a deep trap is changing the move
 
        /* Have we improved alpha? (i.e. this an interesting move) */
@@ -910,32 +919,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
     best = ((Current_Board.side==B->side) ? (DRAW_SCORE) : -(DRAW_SCORE));
     bestmove = NO_MOVE;
   }
-   
-   /*  -------------====     UPDATE THE HASH TABLE     ====--------------  */
-   
-   /* We store the hashtable results as an exact value or an upper bound depending on
-    * whether we're in the PV or not.  If we have found a move that increased alpha
-    * then this move is in the PV and hence is an exact score.  Otherwise, all
-    * moves in this level are a result of fail-high cutoffs from the next ply, and hence
-    * all we really have is an upper bound on the best score.  We know we can't get any
-    * better than this, but we don't really know how bad the score truly is.  All that
-    * matters is that the best we could possibly get isn't good enough. Don't store 
-    * top ply (ply=0) fail-low moves here because a fail low in the window search can
-    * cause bad moves to be stored instead of the best move so far.  This is because we
-    * get only bounds, and one lower bound being higher than another tells us nothing
-    * about the actual scores themselves. (We DO score ply=0 moves if this is the first 
-    * iteration, however, to make sure that *something* is stored!). */
-  if (!AbortFlag) {
-    if      (IsPV)   HashUpdate(B,best,bestmove,depth,HASH_EXACT,threat,ply);
-    else if (ply>0 || GlobalDepth == 2)
-                     HashUpdate(B,best,bestmove,depth,HASH_UPPER,threat,ply);
-  }
-   
-   /* If we've run out of time then print the thinking as far as we've got.  Don't bother
-    * if we didn't actually finish searching the first move, though.  Also don't bother if the
-    * opponent has just resigned. */
-  if (AbortFlag && ply==0 && depth == (GlobalDepth*ONEPLY) && best>-INFINITY && InputFlag != INPUT_RESIGN)
-    PrintThinking(best,B);
+
 
   TrapSet = LocalTrapSet;
 
@@ -955,13 +939,14 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
 #if TRAPPY == 1
   //printf(" TRAPPY? %d\n", GlobalDepth);
   /* Calculate trappiness */
-  if (GlobalDepth >= MAX_DEPTH && ply < GlobalDepth && ply % 2 == 1 && ply <= MAX_TRAP_DEPTH) {
+  if (!AbortFlag && GlobalDepth >= MAX_DEPTH && ply < GlobalDepth && ply % 2 == 1 && ply <= MAX_TRAP_DEPTH && TopPlyMoveno != 0) {
                 /* I'm still not clear on why the minimax paper had code for
                  * calculating the trappiness of even ply nodes, so I skip
                  * them.
                  */
     rawEval = best;
     bestTrapQuality = 0;
+
     for (Moveno = 0 ; Moveno < NMoves ; Moveno++) {
       m = Full[Moveno].move;
       if (m == bestmove) continue;
@@ -995,25 +980,65 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       trapQuality = profit * Tfactor;
       //printf("Tfactor = %f, tQ = %f, rawEval = %d, TScore=%d\n",Tfactor,trapQuality,rawEval,TScores[GlobalDepth-2]);
       if (trapQuality > bestTrapQuality) {
-        //printf("New best trap: tq = %f\n", trapQuality);
+        printf("New best trap: tq = %f\n", trapQuality);
+        PrintMove(m, TRUE, stdout);
+        printf("\n");
+        for (dI = 0; dI < GlobalDepth-1; dI++) {
+          printf("TScores[%d] = %d\n", dI+2, TScores[dI]);
+        }
         bestTrapQuality = trapQuality;
         trapMove = m;
       }
     }
-    if (bestTrapQuality != 0) { 
-      adjEval = rawEval + ceil(scale(bestTrapQuality, rawEval));
-      printf("Adding %d to score for ply %d move to yield %d.\n", adjEval-rawEval, ply, adjEval);
-      if (adjEval > best) {
-        TrapsFound++;
-        best = adjEval;
-        bestmove = trapMove;
-        TrapSet = TRUE;
-      } 
+    if (bestTrapQuality != 0 && bestmove != trapMove) { 
+      adjEval = rawEval - ceil(scale(bestTrapQuality, rawEval));
+      printf("Top move: ");
+      PrintMove(topmove, TRUE, stdout); 
+      printf("; Current best: ");
+      PrintMove(bestmove, TRUE, stdout);
+      printf("\n");
+      printf("Best move score %d\n", best);
+      printf("New move: ");
+      PrintMove(trapMove, TRUE, stdout);
+      printf("; Adding %d to score for ply %d move to yield %d.\n", adjEval-rawEval, ply, adjEval);
+      printf("---\n");
+      TrapsFound++;
+      best = adjEval;
+      bestmove = trapMove;
+      TrapSet = TRUE;
     }
   }
 
 #endif
 #endif
+
+   
+   /*  -------------====     UPDATE THE HASH TABLE     ====--------------  */
+   
+   /* We store the hashtable results as an exact value or an upper bound depending on
+    * whether we're in the PV or not.  If we have found a move that increased alpha
+    * then this move is in the PV and hence is an exact score.  Otherwise, all
+    * moves in this level are a result of fail-high cutoffs from the next ply, and hence
+    * all we really have is an upper bound on the best score.  We know we can't get any
+    * better than this, but we don't really know how bad the score truly is.  All that
+    * matters is that the best we could possibly get isn't good enough. Don't store 
+    * top ply (ply=0) fail-low moves here because a fail low in the window search can
+    * cause bad moves to be stored instead of the best move so far.  This is because we
+    * get only bounds, and one lower bound being higher than another tells us nothing
+    * about the actual scores themselves. (We DO score ply=0 moves if this is the first 
+    * iteration, however, to make sure that *something* is stored!). */
+  if (!AbortFlag) {
+    if      (IsPV)   HashUpdate(B,best,bestmove,depth,HASH_EXACT,threat,ply);
+    else if (ply>0 || GlobalDepth == 2)
+                     HashUpdate(B,best,bestmove,depth,HASH_UPPER,threat,ply);
+  }
+   
+   /* If we've run out of time then print the thinking as far as we've got.  Don't bother
+    * if we didn't actually finish searching the first move, though.  Also don't bother if the
+    * opponent has just resigned. */
+  if (AbortFlag && ply==0 && depth == (GlobalDepth*ONEPLY) && best>-INFINITY && InputFlag != INPUT_RESIGN)
+    PrintThinking(best,B);
+ 
    /* Return the best value found */
   BestMoveRet = bestmove;
   return best;
@@ -1105,10 +1130,15 @@ int Quiesce(Board *B, const int alpha, const int beta, int ply, int fifty, int i
 
    /* If this is too deep then just return the stand-pat score to avoid long
     * quiescence searches. */
+#ifndef NO_QUIESCE
   if ((ply - GlobalDepth) > MAX_QUI) {
     if (!inchk) return best;
     return Eval(B,-INFINITY,tbeta);
   }
+#else
+    if (!inchk) return best;
+    return Eval(B,-INFINITY,tbeta);
+#endif
    
 #ifdef QUIESCENCE_CHECK_EVASIONS
    /* Generate check evasions if we're in check */
