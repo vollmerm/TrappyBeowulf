@@ -113,8 +113,8 @@ float scale(float T, int best) {
 }
 
 void writeTrapData(int TrapSet, int TrapsFound) {
-/*
   FILE *fp;
+  //if (TrapsFound) return; 
   fp = fopen("trapresults.csv","a");
   if (fp == NULL) {
     printf("Could not open trapresults.dat for writing.\n");
@@ -122,7 +122,29 @@ void writeTrapData(int TrapSet, int TrapsFound) {
   }
   fprintf(fp,"%d,%d\n", TrapSet, TrapsFound);
   fclose(fp);
-*/
+}
+
+void WriteBoardDataLite(Board b, MOVE top, MOVE best, MOVE trap, int bestscore, int trapscore, int profit)
+{
+  FILE *fp = fopen("litedata.dat","a");
+  char FEN[FILENAME_MAX];
+  BoardToFEN(&b, FEN);
+  PrintBoardFile(b, fp);
+  fprintf(fp, "Top move ");
+  PrintMove(top, TRUE, fp);
+  fprintf(fp, "\nBest move %d ", bestscore);
+  PrintMove(best, TRUE, fp);
+  fprintf(fp, "\nTrap move %d ", trapscore);
+  PrintMove(trap, TRUE, fp);
+  fprintf(fp, "\nProfit %d\nMax Depth %d\n\n", profit, MAX_DEPTH);
+  fclose(fp);
+}
+
+void WriteMarker()
+{
+  FILE *fp = fopen("litedata.dat","a");
+  fprintf(fp, "********* MARKER\n");
+  fclose(fp);
 }
 
 void WriteBoardData(MOVE trapm, MOVE bestm, Board b, Board c, int best, int adj, 

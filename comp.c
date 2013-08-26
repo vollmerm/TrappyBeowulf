@@ -440,7 +440,7 @@ MOVE Comp(void) {
     printf("Trap was set, and a non-ideal move is being chosen.\n");
   }
 
-//writeTrapData(TrapSet, TrapsFound);
+  writeTrapData(TrapSet, TrapsFound);
 
    /* Return the best move that we found */
   return Previous;
@@ -1002,6 +1002,7 @@ int Search(Board *B,const int alpha, const int beta, int depth, int ply,
       PrintMove(trapMove, TRUE, stdout);
       printf("; Adding %d to score for ply %d move to yield %d.\n", adjEval-rawEval, ply, adjEval);
       printf("---\n");
+      WriteBoardDataLite(Current_Board, topmove, bestmove, trapMove, rawEval, adjEval, profit);
       TrapsFound++;
       best = adjEval;
       bestmove = trapMove;

@@ -27,4 +27,6 @@ float scale(float T, int M);
 void writeTrapData(int, int);
 void WriteBoardData(MOVE trapm, MOVE bestm, Board b, Board c, int best, int adj, 
     int *scores, int scoresCount, int ply);
+void WriteBoardDataLite(Board b, MOVE top, MOVE best, MOVE trap, int bestscore, int trapscore, int profit);
+void WriteMarker();
 #endif
